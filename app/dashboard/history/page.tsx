@@ -1,14 +1,14 @@
 // app/dashboard/history/page.tsx
 import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
-import type { MarchPlan } from "@prisma/client";
 
-async function getPlansForUser(userId: string): Promise<MarchPlan[]> {
-  return prisma.marchPlan.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
-}
+type HistoryPlan = {
+  id: string;
+  name: string;
+  engineVersion: string;
+  createdAt: Date;
+  resultWinProb: number;
+};
 
 export default async function HistoryPage() {
   const { userId } = await auth();
@@ -17,7 +17,10 @@ export default async function HistoryPage() {
     return <p>Unauthorized</p>;
   }
 
-  const plans = await getPlansForUser(userId);
+  const plans: HistoryPlan[] = await prisma.marchPlan.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
 
   if (plans.length === 0) {
     return (
