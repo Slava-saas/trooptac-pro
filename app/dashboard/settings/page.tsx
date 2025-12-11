@@ -1,6 +1,7 @@
 // app/dashboard/settings/page.tsx
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { UpgradeToProButton } from "@/components/UpgradeToProButton";
 
 export default async function SettingsPage() {
   const { userId } = await auth();
@@ -28,16 +29,16 @@ export default async function SettingsPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 text-sm">
-        <button
-          type="button"
-          disabled
-          className="rounded bg-sky-700/60 px-4 py-2 text-white opacity-60"
-        >
-          Upgrade to Pro (coming soon)
-        </button>
+      <div className="mb-4 text-xs text-slate-400">
+        {!isPro
+          ? "Upgrade to Pro to unlock full features."
+          : "You currently have an active Pro subscription."}
+      </div>
 
-        {isPro && (
+      <div className="flex flex-wrap gap-2 text-sm">
+        {!isPro ? (
+          <UpgradeToProButton />
+        ) : (
           <button
             type="button"
             disabled
