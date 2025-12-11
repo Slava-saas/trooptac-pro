@@ -1,0 +1,41 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Haupt-User-Tabelle, Minimal-Spiegelung von Clerk User
+model UserSettings {
+  id               String   @id @map("user_id") // Clerk User ID (use as Primary Key)
+  stripeCustomerId String?  @unique @map("stripe_customer_id")
+  isPro            Boolean  @default(false) @map("is_pro")
+  defaultTroops    Json?    @map("default_troops") // optional: default march presets for user
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  plans            MarchPlan[]
+
+  @@map("user_settings")
+}
+
+model MarchPlan {
+  id                String        @id @default(cuid())
+  name              String
+  userId            String        @map("user_id")
+  user              UserSettings  @relation(fields: [userId], references: [id])
+
+  myMarchPayload    Json          @map("my_march_payload")
+  enemyMarchPayload Json          @map("enemy_march_payload")
+
+  resultScore       Float         @map("result_score")
+  resultWinProb     Float         @map("result_win_prob")
+
+  engineVersion     String        @default("6.4") @map("engine_version")
+  isPublic          Boolean       @default(false) @map("is_public")
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("march_plan")
+}
