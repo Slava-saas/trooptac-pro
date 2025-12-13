@@ -7,99 +7,138 @@ import { prisma } from "@/lib/db";
 // Wichtig: Node-Runtime (Stripe SDK braucht Node, kein Edge)
 export const runtime = "nodejs";
 
-// STRIPE_WEBHOOK_SECRET als non-null deklariert
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (!endpointSecret) {
   throw new Error("STRIPE_WEBHOOK_SECRET is not set");
+}
+const endpointSecretValue: string = endpointSecret;
+function isProFromStatus(status: Stripe.Subscription.Status | null | undefined) {
+  return status === "active" || status === "trialing";
+}
+
+function toDateFromUnixSeconds(sec: number | null | undefined) {
+  return typeof sec === "number" ? new Date(sec * 1000) : null;
+}
+
+
+function minPeriodEndFromItems(sub: Stripe.Subscription) {
+  const ends = sub.items?.data
+    ?.map((i) => i.current_period_end)
+    .filter((x): x is number => typeof x === "number");
+
+  if (!ends || ends.length === 0) return null;
+  return toDateFromUnixSeconds(Math.min(...ends));
 }
 
 export async function POST(req: NextRequest) {
-  console.log("[webhook] Incoming request");
-
   const sig = req.headers.get("stripe-signature");
-
   if (!sig) {
-    console.error("[webhook] Missing stripe-signature header");
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
   const body = await req.text(); // Raw body für Stripe
-  console.log("[webhook] Raw body length:", body.length);
-
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
-    console.log("[webhook] Event constructed:", event.type);
-  } catch (err) {
-    console.error("[webhook] Signature verification failed", err);
+    event = stripe.webhooks.constructEvent(body, sig, endpointSecretValue);
+  } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      console.log("[webhook] Handling checkout.session.completed", {
-        id: session.id,
-        customer: session.customer,
-        metadata: session.metadata,
-      });
 
       const customer =
         typeof session.customer === "string"
           ? session.customer
           : session.customer?.id;
 
+      const subscriptionId =
+        typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription?.id;
+
       const userId = session.metadata?.userId;
 
+      // Wir verknüpfen userId <-> customer/subscription (nur hier haben wir userId sicher)
       if (userId && customer) {
-        console.log("[webhook] Upserting userSettings to PRO", {
-          userId,
-          customer,
-        });
+        let subStatus: Stripe.Subscription.Status | null = null;
+        let currentPeriodEnd: Date | null = null;
+
+        // Subscription optional sicher nachladen für Status + current_period_end
+        if (subscriptionId) {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          subStatus = sub.status;
+          currentPeriodEnd = minPeriodEndFromItems(sub);
+        }
 
         await prisma.userSettings.upsert({
           where: { id: userId },
-          update: { isPro: true, stripeCustomerId: customer },
-          create: { id: userId, isPro: true, stripeCustomerId: customer },
-        });
-      } else {
-        console.warn("[webhook] Missing userId or customer in session", {
-          userId,
-          customer,
+          update: {
+            stripeCustomerId: customer,
+            stripeSubscriptionId: subscriptionId ?? null,
+            stripeSubscriptionStatus: subStatus,
+            stripeCurrentPeriodEnd: currentPeriodEnd,
+            isPro: isProFromStatus(subStatus),
+          },
+          create: {
+            id: userId,
+            stripeCustomerId: customer,
+            stripeSubscriptionId: subscriptionId ?? null,
+            stripeSubscriptionStatus: subStatus,
+            stripeCurrentPeriodEnd: currentPeriodEnd,
+            isPro: isProFromStatus(subStatus),
+          },
         });
       }
-    } else if (event.type === "customer.subscription.deleted") {
+    }
+
+    if (event.type === "customer.subscription.updated") {
       const sub = event.data.object as Stripe.Subscription;
-      console.log("[webhook] Handling customer.subscription.deleted", {
-        id: sub.id,
-        customer: sub.customer,
-      });
 
       const customer =
-        typeof sub.customer === "string"
-          ? sub.customer
-          : sub.customer?.id;
+        typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
 
       if (customer) {
-        console.log("[webhook] Updating userSettings isPro=false", { customer });
-
         await prisma.userSettings.updateMany({
           where: { stripeCustomerId: customer },
-          data: { isPro: false },
+          data: {
+            stripeSubscriptionId: sub.id,
+            stripeSubscriptionStatus: sub.status,
+            stripeCurrentPeriodEnd: minPeriodEndFromItems(sub),
+            isPro: isProFromStatus(sub.status),
+          },
         });
-      } else {
-        console.warn("[webhook] No customer on subscription.deleted");
       }
-    } else {
-      console.log("[webhook] Ignoring event type", event.type);
     }
+
+    if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+
+      const customer =
+        typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+
+      if (customer) {
+        await prisma.userSettings.updateMany({
+          where: { stripeCustomerId: customer },
+          data: {
+            stripeSubscriptionId: sub.id,
+            stripeSubscriptionStatus: sub.status,
+            stripeCurrentPeriodEnd: minPeriodEndFromItems(sub),
+            isPro: false,
+          },
+        });
+      }
+    }
+
+    // Alles andere ignorieren
   } catch (err) {
-    console.error("[webhook] Error processing event", event.type, err);
+    console.error("[webhook] Handler error", event.type, err);
     return NextResponse.json({ error: "Webhook handler error" }, { status: 500 });
   }
 
-  console.log("[webhook] Done", event.type);
   return NextResponse.json({ status: "success" }, { status: 200 });
 }
+
+
