@@ -45,3 +45,10 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# local ops artifacts
+.neon/
+backups/
+_diag_stripe.txt
+
+.neon
