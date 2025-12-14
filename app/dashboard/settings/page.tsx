@@ -2,6 +2,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { UpgradeToProButton } from "@/components/UpgradeToProButton";
+import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
 
 export default async function SettingsPage() {
   const { userId } = await auth();
@@ -39,15 +40,10 @@ export default async function SettingsPage() {
         {!isPro ? (
           <UpgradeToProButton />
         ) : (
-          <button
-            type="button"
-            disabled
-            className="rounded bg-slate-700 px-4 py-2 text-white opacity-60"
-          >
-            Manage Subscription (coming soon)
-          </button>
+          <ManageSubscriptionButton />
         )}
       </div>
     </div>
   );
 }
+
