@@ -16,7 +16,7 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.userSettings.findUnique({ where: { userId } });
+  const user = await prisma.userSettings.findUnique({ where: { id: userId } });
 
   if (!user?.stripeCustomerId) {
     return NextResponse.json({ error: "No customer ID" }, { status: 400 });
@@ -34,3 +34,4 @@ export async function POST() {
     return NextResponse.json({ error: "Portal session error" }, { status: 500 });
   }
 }
+
