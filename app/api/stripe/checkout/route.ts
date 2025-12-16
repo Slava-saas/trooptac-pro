@@ -1,11 +1,15 @@
+import { getBaseUrl } from "@/lib/getBaseUrl";
 // app/api/stripe/checkout/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// Stripe SDK braucht Node (nicht Edge)
+export const runtime = "nodejs";
 
-export async function POST() {
+export async function POST(req: Request) {
+  const APP_URL = getBaseUrl(req);
+
   const { userId } = await auth();
 
   if (!userId) {
@@ -20,6 +24,8 @@ export async function POST() {
   }
 
   try {
+    const stripe = getStripe();
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       allow_promotion_codes: true,
@@ -52,3 +58,4 @@ export async function POST() {
     );
   }
 }
+

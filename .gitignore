@@ -52,3 +52,7 @@ backups/
 _diag_stripe.txt
 
 .neon
+# local backups / diagnostics (keep repo clean)
+*.bak.*
+diag_*.txt
+netlify-*.log

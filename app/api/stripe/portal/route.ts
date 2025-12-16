@@ -1,15 +1,16 @@
+import { getBaseUrl } from "@/lib/getBaseUrl";
 // app/api/stripe/portal/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 // Stripe SDK braucht Node (nicht Edge)
 export const runtime = "nodejs";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+export async function POST(req: Request) {
+  const APP_URL = getBaseUrl(req);
 
-export async function POST() {
   const { userId } = await auth();
 
   if (!userId) {
@@ -23,6 +24,8 @@ export async function POST() {
   }
 
   try {
+    const stripe = getStripe();
+
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${APP_URL}/dashboard/settings`,

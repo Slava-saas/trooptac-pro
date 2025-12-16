@@ -1,17 +1,12 @@
 // app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 
 // Wichtig: Node-Runtime (Stripe SDK braucht Node, kein Edge)
 export const runtime = "nodejs";
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-if (!endpointSecret) {
-  throw new Error("STRIPE_WEBHOOK_SECRET is not set");
-}
-const endpointSecretValue: string = endpointSecret;
 function isProFromStatus(status: Stripe.Subscription.Status | null | undefined) {
   return status === "active" || status === "trialing";
 }
@@ -19,7 +14,6 @@ function isProFromStatus(status: Stripe.Subscription.Status | null | undefined) 
 function toDateFromUnixSeconds(sec: number | null | undefined) {
   return typeof sec === "number" ? new Date(sec * 1000) : null;
 }
-
 
 function minPeriodEndFromItems(sub: Stripe.Subscription) {
   const ends = sub.items?.data
@@ -36,11 +30,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
+  // NICHT im Module-Scope werfen (bricht `next build` beim Collecting Page Data)
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!endpointSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET is not set");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
+  // Stripe-Client erst hier holen (nach env-check)
+  const stripe = getStripe();
+
   const body = await req.text(); // Raw body für Stripe
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecretValue);
+    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
   } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
@@ -65,12 +69,18 @@ export async function POST(req: NextRequest) {
       if (userId && customer) {
         let subStatus: Stripe.Subscription.Status | null = null;
         let currentPeriodEnd: Date | null = null;
+        let cancelAtPeriodEnd: boolean | null = null;
+        let cancelAt: Date | null = null;
+        let canceledAt: Date | null = null;
 
         // Subscription optional sicher nachladen für Status + current_period_end
         if (subscriptionId) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           subStatus = sub.status;
           currentPeriodEnd = minPeriodEndFromItems(sub);
+          cancelAtPeriodEnd = sub.cancel_at_period_end ?? null;
+          cancelAt = toDateFromUnixSeconds(sub.cancel_at);
+          canceledAt = toDateFromUnixSeconds(sub.canceled_at);
         }
 
         await prisma.userSettings.upsert({
@@ -80,6 +90,9 @@ export async function POST(req: NextRequest) {
             stripeSubscriptionId: subscriptionId ?? null,
             stripeSubscriptionStatus: subStatus,
             stripeCurrentPeriodEnd: currentPeriodEnd,
+            stripeCancelAtPeriodEnd: cancelAtPeriodEnd,
+            stripeCancelAt: cancelAt,
+            stripeCanceledAt: canceledAt,
             isPro: isProFromStatus(subStatus),
           },
           create: {
@@ -88,6 +101,9 @@ export async function POST(req: NextRequest) {
             stripeSubscriptionId: subscriptionId ?? null,
             stripeSubscriptionStatus: subStatus,
             stripeCurrentPeriodEnd: currentPeriodEnd,
+            stripeCancelAtPeriodEnd: cancelAtPeriodEnd,
+            stripeCancelAt: cancelAt,
+            stripeCanceledAt: canceledAt,
             isPro: isProFromStatus(subStatus),
           },
         });
@@ -107,6 +123,9 @@ export async function POST(req: NextRequest) {
             stripeSubscriptionId: sub.id,
             stripeSubscriptionStatus: sub.status,
             stripeCurrentPeriodEnd: minPeriodEndFromItems(sub),
+            stripeCancelAtPeriodEnd: sub.cancel_at_period_end,
+            stripeCancelAt: toDateFromUnixSeconds(sub.cancel_at),
+            stripeCanceledAt: toDateFromUnixSeconds(sub.canceled_at),
             isPro: isProFromStatus(sub.status),
           },
         });
@@ -126,13 +145,14 @@ export async function POST(req: NextRequest) {
             stripeSubscriptionId: sub.id,
             stripeSubscriptionStatus: sub.status,
             stripeCurrentPeriodEnd: minPeriodEndFromItems(sub),
+            stripeCancelAtPeriodEnd: sub.cancel_at_period_end,
+            stripeCancelAt: toDateFromUnixSeconds(sub.cancel_at),
+            stripeCanceledAt: toDateFromUnixSeconds(sub.canceled_at),
             isPro: false,
           },
         });
       }
     }
-
-    // Alles andere ignorieren
   } catch (err) {
     console.error("[webhook] Handler error", event.type, err);
     return NextResponse.json({ error: "Webhook handler error" }, { status: 500 });
@@ -140,5 +160,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ status: "success" }, { status: 200 });
 }
-
-

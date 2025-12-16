@@ -8,17 +8,20 @@ generator client {
 
 // Haupt-User-Tabelle, Minimal-Spiegelung von Clerk User
 model UserSettings {
-  id               String   @id @map("user_id") // Clerk User ID (use as Primary Key)
-  stripeCustomerId String?  @unique @map("stripe_customer_id")
-  stripeSubscriptionId     String?  @unique @map("stripe_subscription_id")
+  id                     String   @id @map("user_id") // Clerk User ID (use as Primary Key)
+  stripeCustomerId       String?  @unique @map("stripe_customer_id")
+  stripeSubscriptionId   String?  @unique @map("stripe_subscription_id")
   stripeSubscriptionStatus String?  @map("stripe_subscription_status")
-  stripeCurrentPeriodEnd   DateTime? @map("stripe_current_period_end")
-  isPro            Boolean  @default(false) @map("is_pro")
-  defaultTroops    Json?    @map("default_troops") // optional: default march presets for user
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  stripeCurrentPeriodEnd DateTime? @map("stripe_current_period_end")
+  stripeCancelAtPeriodEnd Boolean? @map("stripe_cancel_at_period_end")
+  stripeCancelAt          DateTime? @map("stripe_cancel_at")
+  stripeCanceledAt        DateTime? @map("stripe_canceled_at")
+  isPro                   Boolean  @default(false) @map("is_pro")
+  defaultTroops           Json?    @map("default_troops")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
-  plans            MarchPlan[]
+  plans MarchPlan[]
 
   @@map("user_settings")
 }
@@ -42,3 +45,18 @@ model MarchPlan {
   @@index([userId])
   @@map("march_plan")
 }
+
+model CancelRequest {
+  id          String    @id @default(cuid())
+  email       String    @map("email")
+  emailHash   String    @map("email_hash")
+  ipHash      String?   @map("ip_hash")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@index([emailHash, createdAt])
+  @@index([ipHash, createdAt])
+  @@map("cancel_request")
+}
+
