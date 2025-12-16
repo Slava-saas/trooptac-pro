@@ -1,5 +1,7 @@
 export function getBaseUrl(req: Request): string {
   const envUrl = (
+    process.env.DEPLOY_PRIME_URL ||
+    process.env.URL ||
     process.env.APP_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     ""
