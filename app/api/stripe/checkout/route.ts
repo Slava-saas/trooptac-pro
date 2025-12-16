@@ -1,7 +1,10 @@
 // app/api/stripe/checkout/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
+
+// Stripe SDK braucht Node (nicht Edge)
+export const runtime = "nodejs";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -20,6 +23,8 @@ export async function POST() {
   }
 
   try {
+    const stripe = getStripe();
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       allow_promotion_codes: true,

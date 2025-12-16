@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
@@ -19,7 +19,10 @@ function minPeriodEndFromItems(sub: Stripe.Subscription) {
   return toDateFromUnixSeconds(Math.min(...ends));
 }
 
-async function findActiveSubByEmail(email: string): Promise<{
+async function findActiveSubByEmail(
+  stripe: Stripe,
+  email: string
+): Promise<{
   customerId: string;
   sub: Stripe.Subscription;
 } | null> {
@@ -89,9 +92,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
+    // Stripe-Client erst hier holen
+    const stripe = getStripe();
+
     // Stripe: Abo finden + Kündigung zum Periodenende setzen
     try {
-      const hit = await findActiveSubByEmail(row.email);
+      const hit = await findActiveSubByEmail(stripe, row.email);
 
       if (hit) {
         const updated = await stripe.subscriptions.update(hit.sub.id, {

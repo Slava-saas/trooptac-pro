@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 // Stripe SDK braucht Node (nicht Edge)
 export const runtime = "nodejs";
@@ -23,6 +23,8 @@ export async function POST() {
   }
 
   try {
+    const stripe = getStripe();
+
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${APP_URL}/dashboard/settings`,
@@ -34,4 +36,3 @@ export async function POST() {
     return NextResponse.json({ error: "Portal session error" }, { status: 500 });
   }
 }
-

@@ -1,7 +1,7 @@
 // app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 
 // Wichtig: Node-Runtime (Stripe SDK braucht Node, kein Edge)
@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
     console.error("STRIPE_WEBHOOK_SECRET is not set");
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
+
+  // Stripe-Client erst hier holen (nach env-check)
+  const stripe = getStripe();
 
   const body = await req.text(); // Raw body für Stripe
   let event: Stripe.Event;
@@ -157,4 +160,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ status: "success" }, { status: 200 });
 }
-

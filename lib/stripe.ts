@@ -1,13 +1,19 @@
 // lib/stripe.ts
 import Stripe from "stripe";
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+let _stripe: Stripe | null = null;
 
-if (!STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not set");
+// Lazy init: kein Throw beim Import (wichtig für `next build` / Deploy Preview)
+// Throw erst, wenn ein Request wirklich Stripe nutzt.
+export function getStripe() {
+  if (_stripe) return _stripe;
+
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+
+  _stripe = new Stripe(key, {
+    apiVersion: "2025-11-17.clover",
+  });
+
+  return _stripe;
 }
-
-// Stripe-Client für Server-seitige Aufrufe (Checkout, Webhooks etc.)
-export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2025-11-17.clover",
-});

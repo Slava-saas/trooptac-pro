@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
       select: { id: true, createdAt: true },
     });
 
-    const appUrl = process.env.APP_URL;
-    if (!appUrl) throw new Error("APP_URL is not set");
+    // Base URL robust aus der Request ableiten (dev / deploy-preview / production)
+    const origin = new URL(req.url).origin;
 
     // Token: row.id + emailHash (damit confirm endpoint email nicht im Klartext braucht)
     const token = `${row.id}.${emailHash}`;
-    const confirmUrl = `${appUrl}/cancel/confirm?token=${encodeURIComponent(token)}`;
+    const confirmUrl = `${origin}/cancel/confirm?token=${encodeURIComponent(token)}`;
 
     await sendCancelConfirmEmail({ to: email, confirmUrl, locale: "de" });
 
@@ -59,5 +59,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "SERVER_ERROR" }, { status: 500 });
   }
 }
-
-
