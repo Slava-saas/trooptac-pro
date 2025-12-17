@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type Stripe from "stripe";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { getStripe } from "@/lib/stripe";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,23 +12,67 @@ import { Separator } from "@/components/ui/separator";
 import { UpgradeToProButton } from "@/components/UpgradeToProButton";
 import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
 
+export const runtime = "nodejs";
+
 export const metadata = {
   title: "Pricing – TroopTac.pro",
   description: "PvP March Calculator pricing",
 };
 
+function formatMoney(cents: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function intervalLabel(i?: Stripe.Price.Recurring.Interval) {
+  if (!i) return "month";
+  if (i === "month") return "month";
+  if (i === "year") return "year";
+  return i;
+}
+
 export default async function PricingPage() {
   const surfaceCard = "bg-muted/20 border-border/60 shadow-lg";
 
+  // Auth (optional)
   const { userId } = await auth();
   const user = userId
     ? await prisma.userSettings.findUnique({ where: { id: userId } })
     : null;
-
   const isPro = user?.isPro ?? false;
 
+  // Stripe price (source of truth)
+  const stripe = getStripe();
+  let price: Stripe.Price | null = null;
+
+  if (process.env.STRIPE_PRICE_ID) {
+    try {
+      price = await stripe.prices.retrieve(process.env.STRIPE_PRICE_ID, {
+        expand: ["product"],
+      });
+    } catch {
+      price = null;
+    }
+  }
+
+  const productName =
+    price?.product && typeof price.product !== "string"
+      ? price.product.name
+      : "TroopTac Pro";
+
+  const amountLabel =
+    price?.unit_amount != null
+      ? formatMoney(price.unit_amount, price.currency)
+      : "€7.00";
+
+  const perLabel = intervalLabel(price?.recurring?.interval);
+
   return (
-    <main className="space-y-10 py-8">
+    <main className="space-y-10 py-10">
+      {/* Header */}
       <section className="space-y-3">
         <Badge variant="secondary">TroopTac.pro</Badge>
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
@@ -37,18 +83,40 @@ export default async function PricingPage() {
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 md:items-start">
+      {/* Plan + Details */}
+      <section className="grid gap-6 md:grid-cols-2 md:items-start">
+        {/* Plan card */}
         <Card className={surfaceCard}>
-          <CardHeader>
-            <CardTitle>Pro</CardTitle>
+          <CardHeader className="space-y-2">
+            <CardTitle>{productName}</CardTitle>
+
+            <div className="space-y-1">
+              <div className="flex items-end gap-2">
+                <div className="text-4xl font-semibold tracking-tight">
+                  {amountLabel}
+                </div>
+                <div className="pb-1 text-sm text-muted-foreground">/ {perLabel}</div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Monthly subscription. Secure checkout by Stripe.
+              </p>
+            </div>
           </CardHeader>
 
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <ul className="list-disc space-y-1 pl-5">
-              <li>Full calculator access</li>
-              <li>Save plans + history</li>
-              <li>Subscription managed in Stripe portal</li>
-            </ul>
+          <CardContent className="space-y-5 text-sm text-muted-foreground">
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Includes
+              </div>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>Full calculator access</li>
+                <li>Save Plans + History</li>
+                <li>Subscription managed in Stripe portal</li>
+              </ul>
+            </div>
+
+            <Separator />
 
             <div className="space-y-2">
               {!userId ? (
@@ -66,13 +134,27 @@ export default async function PricingPage() {
               </Button>
 
               <p className="text-xs text-muted-foreground">
-                You’ll be redirected to Stripe Checkout to complete payment.
+                Cancel anytime in your Account.
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        {/* Right column */}
+        <div className="space-y-6">
+          <Card className={surfaceCard}>
+            <CardHeader>
+              <CardTitle>Why Pro</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Fast, focused workflow for repeat use</li>
+                <li>Deterministic results you can act on</li>
+                <li>Plans &amp; History for iteration speed</li>
+              </ul>
+            </CardContent>
+          </Card>
+
           <Card className={surfaceCard}>
             <CardHeader>
               <CardTitle>FAQ</CardTitle>
@@ -85,8 +167,6 @@ export default async function PricingPage() {
               </ul>
             </CardContent>
           </Card>
-
-          <Separator />
 
           <div className="text-sm text-muted-foreground">
             Prefer to start right away?{" "}
