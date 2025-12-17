@@ -6,39 +6,39 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 export default function HomePage() {
+  // Modern "elevated" surfaces on dark backgrounds: subtle tinted surface + soft shadow.
+  const surfaceCard = "bg-muted/20 border-border/60 shadow-lg";
+
   return (
-    <main className="space-y-12 py-10">
+    <main className="space-y-12 py-8">
       {/* Hero */}
       <section className="grid gap-6 md:grid-cols-2 md:items-center">
         <div className="space-y-4">
           <Badge variant="secondary">TroopTac.pro</Badge>
 
+          {/* Kicker in accent blue (falls Token existiert). */}
+          <p className="text-sm font-medium tracking-wide text-primary text-[color:var(--color-accent-fg)]">
+            Your unfair advantage
+          </p>
+
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            March-Calculator for PvP players.
+            PvP March Calculator
           </h1>
 
           <p className="text-sm text-muted-foreground md:text-base">
-            Build, compare and optimize marches with a fast, focused workflow.
-          </p>
-
-          <p className="text-sm text-muted-foreground">
-            Deterministic. Explainable. Built for competitive play.
+            Set your march capacity. Enter the enemy formation. TroopTac infers the enemy capacity and
+            returns an optimal march with a win prediction—fast, deterministic, battle-ready.
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild>
               <Link href="/dashboard/calculator">Open Calculator</Link>
             </Button>
-
             <Button variant="secondary" asChild>
-              <Link href="#pricing">Pricing</Link>
+              <Link href="/sign-in">Sign in</Link>
             </Button>
-
-            <Link
-              href="/sign-in"
-              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Sign in
+            <Link href="#pricing" className="text-sm text-muted-foreground hover:underline">
+              See pricing →
             </Link>
           </div>
 
@@ -47,28 +47,25 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Visual slot (later: hero image asset) */}
-        <Card className="border-border">
-          <CardContent className="p-4 md:p-6">
-            <div
-              className="aspect-[16/9] w-full rounded-md border border-border bg-muted/20"
-              aria-hidden="true"
-            />
+        {/* Hero visual placeholder (replace with CG-art asset later) */}
+        <Card className={surfaceCard} aria-hidden="true">
+          <CardContent className="p-4">
+            <div className="aspect-[16/9] w-full rounded-md border border-border bg-muted/20" />
             <p className="mt-3 text-xs text-muted-foreground">
-              Hero visual placeholder (cyan-green energy shield).
+              Planned hero visual: cyan-green energy shield (CG/Game-Art).
             </p>
           </CardContent>
         </Card>
       </section>
 
-      {/* Value + How it works */}
-      <section className="grid gap-4 md:grid-cols-2 md:items-start">
-        <Card className="border-border">
+      {/* Value */}
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card className={surfaceCard}>
           <CardHeader>
             <CardTitle>What you get</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            <ul className="list-disc space-y-2 pl-5">
+            <ul className="list-disc space-y-1 pl-5">
               <li>Clean input → clear output</li>
               <li>Saved plans &amp; history (Pro)</li>
               <li>Subscription managed in Stripe portal</li>
@@ -76,76 +73,102 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border">
+        <Card className={surfaceCard}>
           <CardHeader>
-            <CardTitle>How it works</CardTitle>
+            <CardTitle>Built for repeat use</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            <ol className="list-decimal space-y-2 pl-5">
-              <li>Enter your &amp; enemy boosts &amp; capacities.</li>
-              <li>Pick Mode (Damage or Safety).</li>
-              <li>Calculate → apply ratios &amp; tiers.</li>
-            </ol>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Minimal UI. No clutter.</li>
+              <li>Deterministic calculation path.</li>
+              <li>Secure auth and billing (Clerk + Stripe).</li>
+            </ul>
           </CardContent>
         </Card>
       </section>
 
       <Separator />
 
-      {/* Features */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Fast</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Minimal UI. No clutter. Optimized for repeat use.
-          </CardContent>
-        </Card>
+      {/* How it works (nur Bullet-Points, keine Nummerierung) */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Accurate</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Deterministic calculation path and stable defaults.
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className={"flex flex-col " + surfaceCard}>
+            <CardHeader>
+              <CardTitle>Why TroopTac</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-4 text-sm text-muted-foreground">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Deterministic results. No guesswork.</li>
+                <li>Explainable output you can act on.</li>
+                <li>Built for competitive play.</li>
+              </ul>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Secure</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Auth via Clerk. Billing via Stripe. Monitoring via Sentry.
-          </CardContent>
-        </Card>
+              <Link href="#pricing" className="mt-auto text-sm hover:underline">
+                Learn more →
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className={"flex flex-col " + surfaceCard}>
+            <CardHeader>
+              <CardTitle>How you use it</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-4 text-sm text-muted-foreground">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Enter your march capacity.</li>
+                <li>Enter the enemy formation.</li>
+                <li>Calculate → get an optimal march + win prediction.</li>
+              </ul>
+
+              <Link href="/dashboard/calculator" className="mt-auto text-sm hover:underline">
+                Try it →
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className={"flex flex-col " + surfaceCard}>
+            <CardHeader>
+              <CardTitle>What you get back</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-4 text-sm text-muted-foreground">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Optimal march recommendation.</li>
+                <li>Win prediction you can act on.</li>
+                <li>Clean sections and stable defaults.</li>
+              </ul>
+
+              <Link href="/dashboard/calculator" className="mt-auto text-sm hover:underline">
+                Open Calculator →
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* CTA */}
-      <section>
-        <Card className="border-border">
-          <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:p-6">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold tracking-tight">
-                Ready to out-optimize your opponents?
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Deterministic. Explainable. Built for competitive play.
-              </p>
-            </div>
+      <Card className={surfaceCard}>
+        <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Ready to win more fights with less guessing?
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Deterministic. Explainable. Built for competitive play.
+            </p>
+          </div>
 
-            <div className="flex flex-col gap-3 md:flex-row">
-              <Button asChild>
-                <Link href="/dashboard/calculator">Open Calculator</Link>
-              </Button>
-              <Button variant="secondary" asChild>
-                <Link href="#pricing">Pricing</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild>
+              <Link href="/dashboard/calculator">Open Calculator</Link>
+            </Button>
+            <Link href="#pricing" className="text-sm text-muted-foreground hover:underline">
+              See pricing →
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       <Separator />
 
@@ -158,12 +181,12 @@ export default function HomePage() {
           </p>
         </div>
 
-        <Card>
+        <Card className={surfaceCard}>
           <CardHeader>
             <CardTitle>Pro</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <ul className="list-disc space-y-2 pl-5">
+            <ul className="list-disc space-y-1 pl-5">
               <li>Full calculator access</li>
               <li>Save plans + history</li>
               <li>Manage subscription via portal</li>
@@ -180,3 +203,4 @@ export default function HomePage() {
     </main>
   );
 }
+
