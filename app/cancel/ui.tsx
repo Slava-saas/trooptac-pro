@@ -2,6 +2,10 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CancelRequestForm() {
   const [email, setEmail] = useState("");
@@ -28,50 +32,43 @@ export default function CancelRequestForm() {
 
   if (state === "ok") {
     return (
-      <div className="border border-slate-800 rounded p-4 max-w-lg">
-        <p className="text-sm">
-          Wenn die E-Mail-Adresse zu einem aktiven Abo gehört, haben wir dir einen Bestätigungslink gesendet.
-        </p>
-        <p className="mt-2 text-xs text-slate-400">
-          Bitte prüfe auch deinen Spam-Ordner.
-        </p>
-      </div>
+      <Alert>
+        <AlertDescription>
+          If the email belongs to an active subscription, we sent you a confirmation link. Please check spam too.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="border border-slate-800 rounded p-4 max-w-lg">
-      <label className="block text-sm font-medium mb-2" htmlFor="cancel-email">
-        E-Mail-Adresse
-      </label>
-      <input
-        id="cancel-email"
-        name="email"
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        className="w-full rounded border border-slate-800 bg-transparent px-3 py-2 text-sm"
-        placeholder="name@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
+    <form onSubmit={onSubmit} className="grid gap-3">
+      <div className="grid gap-2">
+        <Label htmlFor="cancel-email">Email</Label>
+        <Input
+          id="cancel-email"
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="name@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={state === "loading"}
+        />
+      </div>
 
-      <button
-        type="submit"
-        disabled={state === "loading"}
-        className="mt-3 rounded border border-slate-800 px-3 py-2 text-sm hover:bg-slate-900 disabled:opacity-50"
-      >
-        {state === "loading" ? "Sende..." : "Bestätigungslink anfordern"}
-      </button>
+      <Button type="submit" disabled={state === "loading"}>
+        {state === "loading" ? "Sending…" : "Request confirmation link"}
+      </Button>
 
       {state === "err" ? (
-        <p className="mt-2 text-xs text-slate-400">
-          Anfrage fehlgeschlagen. Bitte versuche es erneut.
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>Request failed. Please try again.</AlertDescription>
+        </Alert>
       ) : (
-        <p className="mt-2 text-xs text-slate-400">
-          Du erhältst einen Link zur Bestätigung. Danach wird die Kündigung verarbeitet.
+        <p className="text-xs text-muted-foreground">
+          You’ll receive a link to confirm. After confirmation, cancellation is processed.
         </p>
       )}
     </form>

@@ -1,57 +1,50 @@
 // app/cancel/page.tsx
 import CancelRequestForm from "./ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 export default function CancelPage() {
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Abo kündigen</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Cancel subscription</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Request a confirmation link. If an active subscription exists for the email, cancellation will be scheduled for period end.
+        </p>
+      </div>
 
-      <h2 className="text-lg font-semibold mt-6 mb-2">
-        Kündigung Ihres Abonnements (gemäß § 312k BGB)
-      </h2>
-      <p className="mb-4">
-        (Diese Seite ermöglicht Ihnen die Kündigung Ihres laufenden Abonnements ohne Login.)
-      </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Abo kündigen</CardTitle>
+          <CardDescription>Kündigung Ihres Abonnements (gemäß § 312k BGB) – ohne Login.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Gib die E-Mail-Adresse ein, mit der du das Abonnement abgeschlossen hast. Du erhältst einen Bestätigungslink per E-Mail.
+          </p>
+          <CancelRequestForm />
+          <p className="text-xs text-muted-foreground">
+            Alternativ: contact@trooptac.pro (formlos per E-Mail).
+          </p>
+        </CardContent>
+      </Card>
 
-      <p className="mb-4">
-        Geben Sie hier die E-Mail-Adresse ein, mit der Sie Ihr Abonnement abgeschlossen haben. Sie erhalten anschließend einen
-        Bestätigungslink per E-Mail, um die Kündigung abzuschließen. Die Kündigung tritt mit Abschluss des laufenden Abrechnungszeitraums
-        in Kraft, sofern nicht anders angegeben.
-      </p>
+      <Separator />
 
-      <p className="mb-4">
-        <strong>Ohne Login kündigen:</strong> Diese Kündigungsfunktion steht allen Kunden offen, auch wenn Sie nicht eingeloggt sind. Sie
-        benötigen lediglich Zugriff auf die E-Mail-Adresse, die bei der Anmeldung/Zahlung hinterlegt wurde.
-      </p>
-
-      <p className="mb-6">
-        (Alternativ können Sie Ihr Abo auch jederzeit durch eine formlose Mitteilung an contact@trooptac.pro kündigen. Wir empfehlen jedoch
-        die Online-Kündigung für eine sofortige Bestätigung.)
-      </p>
-
-      <CancelRequestForm />
-
-      <hr className="my-10 border-slate-800" />
-
-      <h2 className="text-lg font-semibold mt-6 mb-2">Cancel your subscription (English translation)</h2>
-      <p className="mb-4">
-        (Use this page to cancel your current subscription online, without needing to log in.)
-      </p>
-
-      <p className="mb-4">
-        Please enter the email address associated with your subscription. You will receive a confirmation link via email to finalize the
-        cancellation. Unless otherwise stated, the cancellation will take effect at the end of the current billing period.
-      </p>
-
-      <p className="mb-4">
-        <strong>Cancel without login:</strong> This cancellation tool is available to all customers, even if you are not logged in. You only
-        need access to the email address that was used for sign-up/payment.
-      </p>
-
-      <p className="mb-4">
-        (As an alternative, you may cancel your subscription at any time by sending a simple email to contact@trooptac.pro. However, we
-        recommend using the online cancellation above to receive an immediate confirmation.)
-      </p>
-    </main>
+      <Card>
+        <CardHeader>
+          <CardTitle>English translation</CardTitle>
+          <CardDescription>Cancel your subscription without login.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Enter the email used for your subscription. We’ll send a confirmation link. Cancellation is scheduled for the end of the current billing period.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Alternative: contact@trooptac.pro (email).
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

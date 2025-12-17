@@ -1,65 +1,74 @@
 // app/cancel/confirm/ui.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CancelConfirmClient() {
   const sp = useSearchParams();
   const token = sp.get("token") ?? "";
+
   const [state, setState] = useState<"idle" | "loading" | "ok" | "err">("idle");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      if (!token) {
-        setState("err");
-        return;
-      }
-
-      try {
-        setState("loading");
-        const res = await fetch("/api/cancel/confirm", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-
-        if (!res.ok) throw new Error("CONFIRM_FAILED");
-        if (!cancelled) setState("ok");
-      } catch {
-        if (!cancelled) setState("err");
-      }
+  async function onConfirm() {
+    if (!token || state === "loading") {
+      setState("err");
+      return;
     }
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+    try {
+      setState("loading");
+      const res = await fetch("/api/cancel/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (!res.ok) throw new Error("CONFIRM_FAILED");
+      setState("ok");
+    } catch {
+      setState("err");
+    }
+  }
 
-  if (state === "loading" || state === "idle") {
+  if (!token) {
     return (
-      <div className="border border-slate-800 rounded p-4 max-w-lg">
-        <p className="text-sm">Bestätigung wird verarbeitet…</p>
-      </div>
+      <Alert variant="destructive">
+        <AlertDescription>Invalid or expired confirmation link.</AlertDescription>
+      </Alert>
     );
   }
 
   if (state === "ok") {
     return (
-      <div className="border border-slate-800 rounded p-4 max-w-lg">
-        <p className="text-sm">
-          Danke! Wenn zu dieser E-Mail ein aktives Abo existiert, wurde die Kündigung zum Ende des aktuellen Abrechnungszeitraums gesetzt.
-        </p>
-      </div>
+      <Alert>
+        <AlertDescription>
+          Done. If an active subscription exists for this email, cancellation was scheduled for the end of the current billing period.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (state === "err") {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Confirmation failed. Please try again.</AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="border border-slate-800 rounded p-4 max-w-lg">
-      <p className="text-sm">Ungültiger oder abgelaufener Bestätigungslink.</p>
+    <div className="grid gap-3">
+      <Alert>
+        <AlertDescription>
+          Click to finalize the cancellation request.
+        </AlertDescription>
+      </Alert>
+
+      <Button onClick={onConfirm} disabled={state === "loading"}>
+        {state === "loading" ? "Processing…" : "Jetzt kündigen"}
+      </Button>
     </div>
   );
 }

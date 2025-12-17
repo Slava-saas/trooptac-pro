@@ -1,7 +1,8 @@
-// components/UpgradeToProButton.tsx
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function UpgradeToProButton() {
   const [loading, setLoading] = useState(false);
@@ -12,9 +13,7 @@ export function UpgradeToProButton() {
     setError(null);
 
     try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-      });
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
 
       if (!res.ok) {
         setError("Upgrade failed. Please try again.");
@@ -37,16 +36,16 @@ export function UpgradeToProButton() {
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <button
-        type="button"
-        onClick={handleUpgrade}
-        disabled={loading}
-        className="rounded bg-sky-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-      >
+    <div className="grid gap-2">
+      <Button type="button" onClick={handleUpgrade} disabled={loading}>
         {loading ? "Redirecting…" : "Upgrade to Pro"}
-      </button>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      </Button>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   );
 }
