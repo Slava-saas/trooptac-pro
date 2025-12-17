@@ -1,49 +1,41 @@
 // app/cancel/confirm/ui.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CancelConfirmClient() {
   const sp = useSearchParams();
   const token = sp.get("token") ?? "";
+
   const [state, setState] = useState<"idle" | "loading" | "ok" | "err">("idle");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      if (!token) {
-        setState("err");
-        return;
-      }
-
-      try {
-        setState("loading");
-        const res = await fetch("/api/cancel/confirm", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-
-        if (!res.ok) throw new Error("CONFIRM_FAILED");
-        if (!cancelled) setState("ok");
-      } catch {
-        if (!cancelled) setState("err");
-      }
+  async function onConfirm() {
+    if (!token || state === "loading") {
+      setState("err");
+      return;
     }
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+    try {
+      setState("loading");
+      const res = await fetch("/api/cancel/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (!res.ok) throw new Error("CONFIRM_FAILED");
+      setState("ok");
+    } catch {
+      setState("err");
+    }
+  }
 
-  if (state === "loading" || state === "idle") {
+  if (!token) {
     return (
-      <Alert>
-        <AlertDescription>Processing confirmation…</AlertDescription>
+      <Alert variant="destructive">
+        <AlertDescription>Invalid or expired confirmation link.</AlertDescription>
       </Alert>
     );
   }
@@ -52,15 +44,31 @@ export default function CancelConfirmClient() {
     return (
       <Alert>
         <AlertDescription>
-          Thanks! If an active subscription exists for this email, cancellation was scheduled for the end of the current billing period.
+          Done. If an active subscription exists for this email, cancellation was scheduled for the end of the current billing period.
         </AlertDescription>
       </Alert>
     );
   }
 
+  if (state === "err") {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Confirmation failed. Please try again.</AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
-    <Alert variant="destructive">
-      <AlertDescription>Invalid or expired confirmation link.</AlertDescription>
-    </Alert>
+    <div className="grid gap-3">
+      <Alert>
+        <AlertDescription>
+          Click to finalize the cancellation request.
+        </AlertDescription>
+      </Alert>
+
+      <Button onClick={onConfirm} disabled={state === "loading"}>
+        {state === "loading" ? "Processing…" : "Jetzt kündigen"}
+      </Button>
+    </div>
   );
 }
