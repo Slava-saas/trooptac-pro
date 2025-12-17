@@ -37,7 +37,7 @@ export default function HomePage() {
             <Button variant="secondary" asChild>
               <Link href="/sign-in">Sign in</Link>
             </Button>
-            <Link href="#pricing" className="text-sm text-muted-foreground hover:underline">
+            <Link href="/pricing" className="text-sm text-muted-foreground hover:underline">
               See pricing →
             </Link>
           </div>
@@ -105,7 +105,7 @@ export default function HomePage() {
                 <li>Built for competitive play.</li>
               </ul>
 
-              <Link href="#pricing" className="mt-auto text-sm hover:underline">
+              <Link href="/pricing" className="mt-auto text-sm hover:underline">
                 Learn more →
               </Link>
             </CardContent>
@@ -163,7 +163,7 @@ export default function HomePage() {
             <Button asChild>
               <Link href="/dashboard/calculator">Open Calculator</Link>
             </Button>
-            <Link href="#pricing" className="text-sm text-muted-foreground hover:underline">
+            <Link href="/pricing" className="text-sm text-muted-foreground hover:underline">
               See pricing →
             </Link>
           </div>
@@ -203,5 +203,6 @@ export default function HomePage() {
     </main>
   );
 }
+
 
 

@@ -12,7 +12,7 @@ export function AppHeader() {
 
         <nav className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/#pricing">Pricing</Link>
+            <Link href="/pricing">Pricing</Link>
           </Button>
 
           <Button asChild variant="ghost" size="sm">
@@ -33,3 +33,4 @@ export function AppHeader() {
     </header>
   );
 }
+
