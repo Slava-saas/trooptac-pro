@@ -17,7 +17,7 @@ export default function HomePage() {
           <Badge variant="secondary">TroopTac.pro</Badge>
 
           {/* Kicker in accent blue (falls Token existiert). */}
-          <p className="text-sm font-medium tracking-wide text-primary text-[color:var(--color-accent-fg)]">
+          <p className="text-sm font-medium tracking-wide text-[color:var(--color-accent-fg,#58a6ff)]">
             Your unfair advantage
           </p>
 
@@ -203,4 +203,5 @@ export default function HomePage() {
     </main>
   );
 }
+
 
