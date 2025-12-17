@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CancelConfirmClient() {
   const sp = useSearchParams();
@@ -41,25 +42,25 @@ export default function CancelConfirmClient() {
 
   if (state === "loading" || state === "idle") {
     return (
-      <div className="border border-slate-800 rounded p-4 max-w-lg">
-        <p className="text-sm">Bestätigung wird verarbeitet…</p>
-      </div>
+      <Alert>
+        <AlertDescription>Processing confirmation…</AlertDescription>
+      </Alert>
     );
   }
 
   if (state === "ok") {
     return (
-      <div className="border border-slate-800 rounded p-4 max-w-lg">
-        <p className="text-sm">
-          Danke! Wenn zu dieser E-Mail ein aktives Abo existiert, wurde die Kündigung zum Ende des aktuellen Abrechnungszeitraums gesetzt.
-        </p>
-      </div>
+      <Alert>
+        <AlertDescription>
+          Thanks! If an active subscription exists for this email, cancellation was scheduled for the end of the current billing period.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="border border-slate-800 rounded p-4 max-w-lg">
-      <p className="text-sm">Ungültiger oder abgelaufener Bestätigungslink.</p>
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>Invalid or expired confirmation link.</AlertDescription>
+    </Alert>
   );
 }
