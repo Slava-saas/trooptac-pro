@@ -12,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "TroopTac.pro",
-  description: "March-Calculator for PvP players",
+  description: "PvP March Calculator",
 };
 
 export default function RootLayout({
@@ -38,3 +38,5 @@ export default function RootLayout({
     </ClerkProvider>
   );
 }
+
+
