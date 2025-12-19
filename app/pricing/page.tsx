@@ -20,9 +20,11 @@ export const metadata = {
 };
 
 function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
+  const cur = currency.toUpperCase();
+  const locale = cur === "EUR" ? "de-DE" : "en-US";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: currency.toUpperCase(),
+    currency: cur,
     maximumFractionDigits: 2,
   }).format(cents / 100);
 }
@@ -34,17 +36,22 @@ function intervalLabel(i?: Stripe.Price.Recurring.Interval) {
   return i;
 }
 
+function productNameFromPrice(price: Stripe.Price | null) {
+  const p = price?.product;
+  if (!p || typeof p === "string") return "TroopTac Pro";
+  if ("deleted" in p) return "TroopTac Pro";
+  return p.name;
+}
+
 export default async function PricingPage() {
   const surfaceCard = "bg-muted/20 border-border/60 shadow-lg";
 
-  // Auth (optional)
   const { userId } = await auth();
   const user = userId
     ? await prisma.userSettings.findUnique({ where: { id: userId } })
     : null;
   const isPro = user?.isPro ?? false;
 
-  // Stripe price (source of truth)
   const stripe = getStripe();
   let price: Stripe.Price | null = null;
 
@@ -58,21 +65,13 @@ export default async function PricingPage() {
     }
   }
 
-  const productName =
-    price?.product && typeof price.product !== "string"
-      ? price.product.name
-      : "TroopTac Pro";
-
+  const productName = productNameFromPrice(price);
   const amountLabel =
-    price?.unit_amount != null
-      ? formatMoney(price.unit_amount, price.currency)
-      : "€7.00";
-
+    price?.unit_amount != null ? formatMoney(price.unit_amount, price.currency) : "7,00 €";
   const perLabel = intervalLabel(price?.recurring?.interval);
 
   return (
     <main className="space-y-10 py-10">
-      {/* Header */}
       <section className="space-y-3">
         <Badge variant="secondary">TroopTac.pro</Badge>
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
@@ -83,9 +82,7 @@ export default async function PricingPage() {
         </p>
       </section>
 
-      {/* Plan + Details */}
       <section className="grid gap-6 md:grid-cols-2 md:items-start">
-        {/* Plan card */}
         <Card className={surfaceCard}>
           <CardHeader className="space-y-2">
             <CardTitle>{productName}</CardTitle>
@@ -99,7 +96,7 @@ export default async function PricingPage() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Monthly subscription. Secure checkout by Stripe.
+                Subscription. Secure checkout by Stripe.
               </p>
             </div>
           </CardHeader>
@@ -140,7 +137,6 @@ export default async function PricingPage() {
           </CardContent>
         </Card>
 
-        {/* Right column */}
         <div className="space-y-6">
           <Card className={surfaceCard}>
             <CardHeader>
