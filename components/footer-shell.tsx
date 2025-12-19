@@ -11,11 +11,7 @@ import {
 
 export function FooterShell() {
   const pathname = usePathname();
-
-  // Dashboard hat bereits Bottom-Nav -> kein zusätzlicher Footer
-  if (pathname.startsWith("/dashboard")) return null;
-
-  return (
+return (
     <footer className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/80 backdrop-blur">
       <div className="mx-auto max-w-5xl px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
@@ -66,3 +62,4 @@ export function FooterShell() {
     </footer>
   );
 }
+
