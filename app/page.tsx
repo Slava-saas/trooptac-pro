@@ -67,7 +67,7 @@ export default function HomePage() {
           <CardContent className="text-sm text-muted-foreground">
             <ul className="list-disc space-y-1 pl-5">
               <li>Clean input → clear output</li>
-              <li>Saved plans &amp; history (Pro)</li>
+              <li>Saved profiles &amp; history (Pro)</li>
               <li>Subscription managed in Stripe portal</li>
             </ul>
           </CardContent>
@@ -188,7 +188,7 @@ export default function HomePage() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <ul className="list-disc space-y-1 pl-5">
               <li>Full calculator access</li>
-              <li>Save plans + history</li>
+              <li>Save profiles (Pro)</li>
               <li>Manage subscription via portal</li>
             </ul>
 
@@ -203,6 +203,7 @@ export default function HomePage() {
     </main>
   );
 }
+
 
 
 
