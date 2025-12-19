@@ -1,17 +1,11 @@
 // app/dashboard/calculator/actions.ts
 import { evaluateBattle } from "@/lib/engine/core";
 import { ENGINE_VERSION } from "@/lib/engine/constants";
+import { recommendMarch } from "@/lib/engine/recommend";
 import { prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 
-function isMyMarchKey(key: string): boolean {
-  return (
-    key.startsWith("march.Infantry_") ||
-    key.startsWith("march.Vehicles_") ||
-    key.startsWith("march.Distance_") ||
-    key.startsWith("march.Battery_")
-  );
-}
+type MarchPayload = Record<string, number>;
 
 function isEnemyMarchKey(key: string): boolean {
   return (
@@ -22,83 +16,64 @@ function isEnemyMarchKey(key: string): boolean {
   );
 }
 
-export async function calculateBattleAction(formData: FormData) {
-  "use server";
+function parseEnemyMarch(entries: Record<string, unknown>): MarchPayload {
+  const enemy: MarchPayload = {};
 
-  const data = Object.fromEntries(formData.entries());
-
-  const myMarch: Record<string, number> = {};
-  const enemyMarch: Record<string, number> = {};
-
-  for (const [key, val] of Object.entries(data)) {
+  for (const [key, val] of Object.entries(entries)) {
     const numVal = Number(val) || 0;
 
-    // 1) Enemy-March zuerst
     if (isEnemyMarchKey(key)) {
       const unitKey = key
         .replace("march.", "") // Infantry_enemy_1
         .replace("_enemy", ""); // Infantry_1
-
-      enemyMarch[unitKey] = numVal;
-      continue;
-    }
-
-    // 2) My March
-    if (isMyMarchKey(key) && !key.includes("_enemy")) {
-      const unitKey = key.replace("march.", ""); // Infantry_1
-      myMarch[unitKey] = numVal;
-      continue;
+      enemy[unitKey] = numVal;
     }
   }
 
-  const result = evaluateBattle(myMarch, enemyMarch);
+  return enemy;
+}
 
-  return result;
+export async function calculateBattleAction(formData: FormData) {
+  "use server";
+
+  const capRaw = formData.get("capYou");
+  const capYou = Number(capRaw) || 0;
+
+  const data = Object.fromEntries(formData.entries());
+  const enemyMarch = parseEnemyMarch(data);
+
+  const { recommendedMarch, result } = recommendMarch(capYou, enemyMarch);
+
+  return {
+    ...result,
+    recommendedMarch,
+  };
 }
 
 export async function savePlanAction(formData: FormData) {
   "use server";
 
   const { userId } = await auth();
-  if (!userId) {
-    throw new Error("Unauthenticated");
+  if (!userId) throw new Error("Unauthenticated");
+
+  const capRaw = formData.get("capYou");
+  const capYou = Number(capRaw) || 0;
+
+  if (!Number.isFinite(capYou) || capYou <= 0) {
+    throw new Error("Enter your march capacity to save a profile.");
   }
 
-  const nameRaw = formData.get("planName");
+  const nameRaw = formData.get("profileName") ?? formData.get("planName");
   const name =
-    (typeof nameRaw === "string" && nameRaw.trim().length > 0
+    typeof nameRaw === "string" && nameRaw.trim().length > 0
       ? nameRaw.trim()
-      : "Untitled");
+      : "Untitled";
 
   const data = Object.fromEntries(formData.entries());
+  const enemyMarch = parseEnemyMarch(data);
 
-  const myMarch: Record<string, number> = {};
-  const enemyMarch: Record<string, number> = {};
-
-  for (const [key, val] of Object.entries(data)) {
-    if (key === "planName") continue;
-
-    const numVal = Number(val) || 0;
-
-    // 1) Enemy-March zuerst
-    if (isEnemyMarchKey(key)) {
-      const unitKey = key
-        .replace("march.", "")
-        .replace("_enemy", "");
-
-      enemyMarch[unitKey] = numVal;
-      continue;
-    }
-
-    // 2) My March
-    if (isMyMarchKey(key) && !key.includes("_enemy")) {
-      const unitKey = key.replace("march.", "");
-      myMarch[unitKey] = numVal;
-      continue;
-    }
-  }
-
-  const result = evaluateBattle(myMarch, enemyMarch);
+  // Save = speichert Szenario (cap + enemy) + Ergebnis des Recommended March
+  const { recommendedMarch, result } = recommendMarch(capYou, enemyMarch);
 
   const userSettings = await prisma.userSettings.upsert({
     where: { id: userId },
@@ -106,21 +81,19 @@ export async function savePlanAction(formData: FormData) {
     create: { id: userId },
   });
 
-  const countPlans = await prisma.marchPlan.count({
+  const countProfiles = await prisma.marchPlan.count({
     where: { userId },
   });
 
-  if (!userSettings.isPro && countPlans >= 5) {
-    throw new Error(
-      "Free profile limit reached. Upgrade to Pro for unlimited saves.",
-    );
+  if (!userSettings.isPro && countProfiles >= 5) {
+    throw new Error("Free profile limit reached. Upgrade to Pro for unlimited saves.");
   }
 
   const saved = await prisma.marchPlan.create({
     data: {
       userId,
       name,
-      myMarchPayload: myMarch,
+      myMarchPayload: { capYou, recommendedMarch }, // bewusst: kein "your march" Input mehr
       enemyMarchPayload: enemyMarch,
       resultScore: result.scoreYou,
       resultWinProb: result.winProbability,
@@ -131,56 +104,42 @@ export async function savePlanAction(formData: FormData) {
   return saved.id;
 }
 
-export type ProfileListItem = {
-  id: string;
-  name: string;
-  createdAt: string;
-};
-
-export type ProfilePayload = {
-  id: string;
-  name: string;
-  myMarchPayload: Record<string, number>;
-  enemyMarchPayload: Record<string, number>;
-};
-
-export async function listProfilesAction(): Promise<ProfileListItem[]> {
+export async function listProfilesAction() {
   "use server";
 
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthenticated");
 
-  const plans = await prisma.marchPlan.findMany({
+  const profiles = await prisma.marchPlan.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, createdAt: true },
+    select: { id: true, name: true, createdAt: true, resultWinProb: true },
+    take: 50,
   });
 
-  return plans.map((p) => ({
-    id: p.id,
-    name: p.name,
-    createdAt: p.createdAt.toISOString(),
-  }));
+  return profiles;
 }
 
-export async function loadProfileAction(profileId: string): Promise<ProfilePayload> {
+export async function loadProfileAction(profileId: string) {
   "use server";
 
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthenticated");
 
-  const plan = await prisma.marchPlan.findFirst({
+  const p = await prisma.marchPlan.findFirst({
     where: { id: profileId, userId },
     select: { id: true, name: true, myMarchPayload: true, enemyMarchPayload: true },
   });
 
-  if (!plan) throw new Error("Profile not found.");
+  if (!p) throw new Error("Profile not found.");
+
+  const mp = p.myMarchPayload as any;
+  const capYou = Number(mp?.capYou) || 0;
 
   return {
-    id: plan.id,
-    name: plan.name,
-    myMarchPayload: (plan.myMarchPayload ?? {}) as Record<string, number>,
-    enemyMarchPayload: (plan.enemyMarchPayload ?? {}) as Record<string, number>,
+    id: p.id,
+    name: p.name,
+    capYou,
+    enemyMarchPayload: (p.enemyMarchPayload ?? {}) as Record<string, number>,
   };
 }
-
