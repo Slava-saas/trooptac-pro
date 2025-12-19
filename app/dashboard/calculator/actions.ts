@@ -112,7 +112,7 @@ export async function savePlanAction(formData: FormData) {
 
   if (!userSettings.isPro && countPlans >= 5) {
     throw new Error(
-      "Free plan limit reached. Upgrade to Pro for unlimited saves.",
+      "Free profile limit reached. Upgrade to Pro for unlimited saves.",
     );
   }
 
@@ -130,3 +130,57 @@ export async function savePlanAction(formData: FormData) {
 
   return saved.id;
 }
+
+export type ProfileListItem = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
+export type ProfilePayload = {
+  id: string;
+  name: string;
+  myMarchPayload: Record<string, number>;
+  enemyMarchPayload: Record<string, number>;
+};
+
+export async function listProfilesAction(): Promise<ProfileListItem[]> {
+  "use server";
+
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthenticated");
+
+  const plans = await prisma.marchPlan.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, createdAt: true },
+  });
+
+  return plans.map((p) => ({
+    id: p.id,
+    name: p.name,
+    createdAt: p.createdAt.toISOString(),
+  }));
+}
+
+export async function loadProfileAction(profileId: string): Promise<ProfilePayload> {
+  "use server";
+
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthenticated");
+
+  const plan = await prisma.marchPlan.findFirst({
+    where: { id: profileId, userId },
+    select: { id: true, name: true, myMarchPayload: true, enemyMarchPayload: true },
+  });
+
+  if (!plan) throw new Error("Profile not found.");
+
+  return {
+    id: plan.id,
+    name: plan.name,
+    myMarchPayload: (plan.myMarchPayload ?? {}) as Record<string, number>,
+    enemyMarchPayload: (plan.enemyMarchPayload ?? {}) as Record<string, number>,
+  };
+}
+

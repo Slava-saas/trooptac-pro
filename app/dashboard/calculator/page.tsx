@@ -1,5 +1,10 @@
 // app/dashboard/calculator/page.tsx
-import { calculateBattleAction, savePlanAction } from "./actions";
+import {
+  calculateBattleAction,
+  savePlanAction,
+  listProfilesAction,
+  loadProfileAction,
+} from "./actions";
 import { CalculatorForm } from "./CalculatorForm";
 
 export default function CalculatorPage() {
@@ -9,6 +14,8 @@ export default function CalculatorPage() {
       <CalculatorForm
         calculateBattle={calculateBattleAction}
         savePlan={savePlanAction}
+        listProfiles={listProfilesAction}
+        loadProfile={loadProfileAction}
       />
     </div>
   );
