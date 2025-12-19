@@ -29,6 +29,27 @@ type Props = {
   loadProfile: (profileId: string) => Promise<LoadedProfile>;
 };
 
+const TIERS = [1,2,3,4,5,6,7,8,9,10,11,12] as const;
+const TYPES = ["Infantry", "Vehicles", "Distance", "Battery"] as const;
+
+function buildZeroEnemyMarch(): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const t of TYPES) {
+    for (const tier of TIERS) {
+      m[`${t}_enemy_${tier}`] = 0;
+    }
+  }
+  return m;
+}
+
+const DEFAULT_MARCH = buildZeroEnemyMarch();
+
+const DEFAULTS: MarchFormValues = {
+  planName: "",
+  march: DEFAULT_MARCH,
+  enemy: {},
+};
+
 function enemyFormKey(unitKey: string): string {
   // "Infantry_1" -> "Infantry_enemy_1"
   return unitKey.replace(/^([A-Za-z]+)_/, "$1_enemy_");
@@ -49,7 +70,12 @@ function groupByType(march: Record<string, number>) {
   return out;
 }
 
-export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadProfile }: Props) {
+export function CalculatorForm({
+  calculateBattle,
+  savePlan,
+  listProfiles,
+  loadProfile,
+}: Props) {
   const [capYou, setCapYou] = useState<number>(0);
 
   const [result, setResult] = useState<RecommendResult | null>(null);
@@ -64,15 +90,22 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
   const [profiles, setProfiles] = useState<ProfileListItem[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
 
+  const [overwriteCandidate, setOverwriteCandidate] = useState<string | null>(null);
+
   const form = useForm<MarchFormValues>({
-    defaultValues: {
-      planName: "",
-      march: {},
-      enemy: {},
-    },
+    defaultValues: DEFAULTS,
   });
 
-  const { handleSubmit, reset, register, getValues } = form;
+  const { handleSubmit, reset, register, getValues, watch } = form;
+
+  const nameValue = (watch("planName") ?? "").trim();
+  const nameOk = nameValue.length > 0;
+
+  useEffect(() => {
+    if (overwriteCandidate && nameValue !== overwriteCandidate) {
+      setOverwriteCandidate(null);
+    }
+  }, [nameValue, overwriteCandidate]);
 
   const refreshProfiles = async () => {
     const p = await listProfiles();
@@ -85,12 +118,18 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const buildFormData = (values: MarchFormValues): FormData => {
+  const buildFormData = (values: MarchFormValues, opts?: { overwrite?: boolean }): FormData => {
     const fd = new FormData();
 
     fd.append("capYou", String(Number(capYou) || 0));
 
-    if (values.planName) fd.append("profileName", values.planName);
+    if (values.planName) {
+      fd.append("profileName", values.planName);
+    }
+
+    if (opts?.overwrite) {
+      fd.append("overwrite", "true");
+    }
 
     for (const [key, value] of Object.entries(values.march ?? {})) {
       const num = Number(value ?? 0) || 0;
@@ -119,9 +158,18 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
     });
   };
 
-  const handleSaveProfile = () => {
+  const doSave = (opts?: { overwrite?: boolean }) => {
     const values = getValues();
-    const fd = buildFormData(values);
+
+    const name = (values.planName ?? "").trim();
+    if (!name) {
+      setSaveError("Profile name is required.");
+      setSaveMessage(null);
+      setOverwriteCandidate(null);
+      return;
+    }
+
+    const fd = buildFormData(values, opts);
 
     setSaveMessage(null);
     setSaveError(null);
@@ -130,9 +178,23 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
       try {
         const id = await savePlan(fd);
         setSaveMessage(`Profile saved (ID: ${id})`);
+        setOverwriteCandidate(null);
         await refreshProfiles();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed to save profile.";
+
+        if (msg.includes("PROFILE_NAME_REQUIRED")) {
+          setSaveError("Profile name is required.");
+          return;
+        }
+
+        if (msg.includes("PROFILE_NAME_EXISTS")) {
+          setOverwriteCandidate(name);
+          setSaveError(null);
+          setSaveMessage(null);
+          return;
+        }
+
         setSaveError(msg);
       }
     });
@@ -151,26 +213,32 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
         }
 
         setCapYou(Number(p.capYou) || 0);
-        reset({ planName: p.name, march: enemyMarchAsFormKeys, enemy: {} });
+
+        const merged = { ...DEFAULT_MARCH, ...enemyMarchAsFormKeys };
+
+        reset({ planName: p.name, march: merged, enemy: {} });
 
         setResult(null);
         setCalcError(null);
         setSaveMessage(null);
         setSaveError(null);
+        setOverwriteCandidate(null);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed to load profile.";
         setCalcError(msg);
+        setResult(null);
       }
     });
   };
 
   const handleReset = () => {
     setCapYou(0);
-    reset({ planName: "", march: {}, enemy: {} });
+    reset(DEFAULTS);
     setResult(null);
     setCalcError(null);
     setSaveMessage(null);
     setSaveError(null);
+    setOverwriteCandidate(null);
   };
 
   const winPerc =
@@ -195,7 +263,7 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
 
   return (
     <div className="space-y-6">
-      {/* Profile row */}
+      {/* Top bar */}
       <div className="grid gap-3 rounded border border-slate-800 bg-slate-900 p-4 md:grid-cols-3">
         <div className="space-y-2">
           <div className="text-sm font-medium">Profile</div>
@@ -215,6 +283,7 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
                 ))
               )}
             </select>
+
             <button
               type="button"
               onClick={handleApplyProfile}
@@ -235,8 +304,12 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
             type="text"
             {...register("planName")}
             className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-2 text-sm text-slate-100"
-            placeholder="Optional name"
+            placeholder="Required"
+            onFocus={() => setOverwriteCandidate(null)}
           />
+          <div className="text-xs text-slate-400">
+            Required to save.
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -254,6 +327,36 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
           />
         </div>
       </div>
+
+      {/* Overwrite confirm */}
+      {overwriteCandidate ? (
+        <div className="rounded border border-slate-800 bg-slate-900 p-4 text-sm">
+          <div className="font-medium">
+            A profile named “{overwriteCandidate}” already exists.
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={disableActions}
+              onClick={() => doSave({ overwrite: true })}
+              className="rounded bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-60"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              disabled={disableActions}
+              onClick={() => setOverwriteCandidate(null)}
+              className="rounded border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-60"
+            >
+              No
+            </button>
+          </div>
+          <div className="mt-2 text-xs text-slate-400">
+            If you click “No”, choose a different profile name.
+          </div>
+        </div>
+      ) : null}
 
       {/* Enemy input + Actions */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -278,8 +381,8 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
 
           <button
             type="button"
-            onClick={handleSaveProfile}
-            disabled={disableActions}
+            onClick={() => doSave()}
+            disabled={disableActions || !nameOk}
             className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
           >
             {isSaving ? "Saving..." : "Save profile"}
@@ -297,6 +400,7 @@ export function CalculatorForm({ calculateBattle, savePlan, listProfiles, loadPr
         {calcError && <p className="text-xs text-red-400">{calcError}</p>}
         {saveMessage && <p className="text-xs text-emerald-400">{saveMessage}</p>}
         {saveError && <p className="text-xs text-red-400">{saveError}</p>}
+        {!nameOk && <p className="text-xs text-amber-400">Profile name is required to save.</p>}
       </form>
 
       {/* Output */}
