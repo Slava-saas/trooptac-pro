@@ -134,12 +134,18 @@ export async function loadProfileAction(profileId: string) {
   if (!p) throw new Error("Profile not found.");
 
   const mp = p.myMarchPayload as any;
-  const capYou = Number(mp?.capYou) || 0;
 
-  return {
+  let capYou = Number(mp?.capYou) || 0;
+  if (!capYou || capYou <= 0) {
+    // Backward-compatible: older saves stored a full march payload (sum = capacity)
+    capYou = (Object.values(mp ?? {}) as unknown[]).reduce<number>((sum, v) => sum + (Number(v) || 0), 0);
+  }
+return {
     id: p.id,
     name: p.name,
     capYou,
     enemyMarchPayload: (p.enemyMarchPayload ?? {}) as Record<string, number>,
   };
 }
+
+
