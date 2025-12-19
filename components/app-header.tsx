@@ -10,13 +10,15 @@ export function AppHeader() {
           TroopTac.pro
         </Link>
 
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/dashboard/calculator">Calculator</Link>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link href="/pricing">Pricing</Link>
           </Button>
-
           <Button asChild variant="ghost" size="sm">
-            <Link href="/dashboard/calculator">Calculator</Link>
+            <Link href="/dashboard/settings">Account</Link>
           </Button>
 
           <SignedIn>
@@ -33,4 +35,3 @@ export function AppHeader() {
     </header>
   );
 }
-
